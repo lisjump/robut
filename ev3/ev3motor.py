@@ -106,7 +106,7 @@ class TankCar():
     self.stoptime = self.left.stoptime
     return(self.stoptime)
   
-  def TightTurn(self, direction, degrees = None, seconds = None, speed = None, wait = True):
+  def tightTurn(self, direction, degrees = None, seconds = None, speed = None, wait = True):
     if direction.lower() not in ["left", "right"]:
       print("Error: directions must be 'left' or 'right'")
       return

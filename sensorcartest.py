@@ -5,7 +5,7 @@ import importlib
 import datetime
 from ev3.sensorcar import *
 
-car = SensorCar()
+car = SensorCar() 
 
 
 movequeue = []
@@ -14,6 +14,8 @@ movequeue.append(queueitem)
 queueitem = ev3.QueueItem(startaction = car.sound.beep, startkwargs = {"args": "-f 300.7 -r 2 -d 100 -l 400"}, runtime = 1)
 movequeue.append(queueitem)
 queueitem = ev3.QueueItem(startaction = car.goStraight, startkwargs = {"speed": -500, "seconds": 3, "wait": False})
+movequeue.append(queueitem)
+queueitem = ev3.QueueItem(startaction = car.tightTurn, startkwargs = {"direction": "left", "degrees": 180, "speed": 300, "wait": False})
 movequeue.append(queueitem)
 # queueitem = ev3.QueueItem(startaction = car.goStraight, startkwargs = {"speed": 500, "inches": 10, "wait": False})
 # movequeue.append(queueitem)
