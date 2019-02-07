@@ -3,15 +3,18 @@
 import ev3.ev3motor as ev3
 import importlib
 import datetime
+from ev3.sensorcar import *
 
-left = ev3.MyMotor(port = "B", tireradius = .73)
-right = ev3.MyMotor(port = "C", tireradius = .73)
-car = ev3.TankCar(left=left, right=right, axlelength=3.9)
+car = SensorCar()
+
+
 movequeue = []
-queueitem = ev3.QueueItem(startaction = car.goStraight, startkwargs = {"speed": 500, "seconds": 3, "wait": False})
+queueitem = ev3.QueueItem(startaction = car.goStraight, startkwargs = {"speed": 500, "seconds": 4, "wait": False})
+movequeue.append(queueitem)
+queueitem = ev3.QueueItem(startaction = car.sound.beep, startkwargs = {"args": "-f 300.7 -r 2 -d 100 -l 400"}, runtime = 1)
 movequeue.append(queueitem)
 queueitem = ev3.QueueItem(startaction = car.goStraight, startkwargs = {"speed": -500, "seconds": 3, "wait": False})
-# movequeue.append(queueitem)
+movequeue.append(queueitem)
 # queueitem = ev3.QueueItem(startaction = car.goStraight, startkwargs = {"speed": 500, "inches": 10, "wait": False})
 # movequeue.append(queueitem)
 # queueitem = ev3.QueueItem(startaction = car.goStraight, startkwargs = {"speed": 500, "inches": -10, "wait": False})
@@ -21,10 +24,6 @@ queueitem = ev3.QueueItem(startaction = car.goStraight, startkwargs = {"speed": 
 # queueitem = ev3.QueueItem(startaction = car.goStraight, startkwargs = {"inches": -5, "seconds": 1, "wait": False})
 # movequeue.append(queueitem)
 
-touch = ev3.TouchSensor()
-sound = ev3.Sound()
-color = ev3.ColorSensor()
-gyro = ev3.GyroSensor()
 
 
 
@@ -32,24 +31,24 @@ activeitem = False
 while True:
   if not activeitem or datetime.datetime.now() >= activeitem.stoptime:
     if activeitem and activeitem.stopaction:
-      activeitem.stopaction(**activeitem.stopkwargs)
+      if activeitem.stopkwargs:
+        activeitem.stopaction(**activeitem.stopkwargs)
+      else:
+        activeitem.stopaction()
+
     if len(movequeue) > 0:
       activeitem = movequeue.pop(0)
-      activeitem.stoptime = activeitem.startaction(**activeitem.startkwargs)
+      if activeitem.startkwargs:
+        activeitem.stoptime = activeitem.startaction(**activeitem.startkwargs)
+      else:
+        activeitem.stoptime = activeitem.startaction()
       if activeitem.runtime:
-          activeitem.stoptime = datetime.datetime.now() + timedelta("seconds = " + command[4])
+          activeitem.stoptime = datetime.datetime.now() + datetime.timedelta(seconds = activeitem.runtime)
 
-  if touch.is_pressed:
-    sound.play_song((
-      ('D4', 'e3'),
-      ('D4', 'e3'),
-      ('D4', 'e3'),
-      ('G4', 'h'),
-      ('D5', 'h')
-    ))
+  if car.touch.is_pressed:
+    car.sound.beep()
 
-
-  if color.color == 1:
+  if car.color.color == 1:
     sound.play_song((
       ('D4', 'e3'),      # intro anacrouse
       ('D4', 'e3'),
