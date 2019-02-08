@@ -51,7 +51,7 @@ while True:
     car.sound.beep()
 
   if car.color.color == 1:
-    sound.play_song((
+    car.sound.play_song((
       ('D4', 'e3'),      # intro anacrouse
       ('D4', 'e3'),
       ('D4', 'e3'),

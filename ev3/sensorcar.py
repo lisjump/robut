@@ -1,4 +1,6 @@
 import ev3.ev3motor as ev3
+from ev3dev2.sensor.lego import *
+from ev3dev2.sound import *
 
 # A library for interacting with the EV3 Education Sensor Car.  
 
@@ -13,12 +15,36 @@ class SensorCar(ev3.TankCar):
     left = ev3.MyMotor(port = leftmotorport.upper(), tireradius = tireradius)
     right = ev3.MyMotor(port = rightmotorport.upper(), tireradius = tireradius)
 
-    self.touch = ev3.TouchSensor()
-    self.color = ev3.ColorSensor()
-    self.gyro = ev3.GyroSensor()
-    self.sonic = ev3.UltrasonicSensor()
-    self.ir = ev3.InfraredSensor()
-    
-    self.sound = ev3.Sound()
+    self.getSensors()
+    self.sound = Sound()
 
     ev3.TankCar.__init__(self, left, right, axlelength = axlelength)
+  
+  def getSensors(self):
+    try:
+      self.touch = TouchSensor()
+    except:
+      self.touch = None
+    try:
+      self.color = ColorSensor()
+    except:
+      self.color = None
+    try:
+      self.gyro = GyroSensor()
+    except:
+      self.gyro = None
+    try:
+      self.sonic = UltrasonicSensor()
+    except:
+      self.sonic = None
+    try:
+      self.ir = InfraredSensor()
+    except:
+      self.ir = None
+
+  def tightTurn(self, direction, degrees = None, seconds = None, speed = None, wait = True):
+    if not self.gyro or not degrees:
+      super().tightTurn(direction = direction, degrees = degrees, seconds = seconds, speed = speed, wait = wait)
+    else:
+      super().tightTurn(direction = direction, degrees = degrees, seconds = seconds, speed = speed, wait = wait)
+    return self.stoptime
