@@ -17,7 +17,7 @@ class Queue():
     self.queue = []
 
 class MyMotor(Motor):
-  def __init__(self, port, reversed = 0, tireradius = None, defaultSpeed = 0):
+  def __init__(self, port, reversed = 0, tireradius = None, defaultSpeed = 100):
     if port.upper() not in ["A", "B", "C", "D"]:
       print("Error: Port must be A, B, C, or D")
       return
@@ -28,16 +28,37 @@ class MyMotor(Motor):
     self.defaultSpeed = defaultSpeed
     self.stoptime = None
     self.stop_action = self.STOP_ACTION_BRAKE
-
-  def tachosperinch(self):
+    self.port = port.upper()
     if self.tireradius:
-      return self.count_per_rot/(2*math.pi*self.tireradius)
+      self.setdegreesperinch()
+      self.settachosperinch()
+
+  def settachosperinch(self):
+    if self.tireradius:
+      self.tachosperinch = self.count_per_rot/(2 * math.pi * self.tireradius)
     else:
       print("Error: need tire radius")
       return
 
+  def setdegreesperinch(self):
+    if self.tireradius:
+      self.degreesperinch = 360/(2*math.pi*self.tireradius)
+    else:
+      print("Error: need tire radius")
+      return
+
+  def speedgiveninchesseconds(self, inches, seconds):
+    if self.tachosperinch:
+      speed = self.tachosperinch * inches / seconds
+      if speed > self.max_speed:
+        print("Error: speed is greater than max_speed")
+        return
+      return speed
+    else:
+      print("Error: need tire radius")
+
   def runMotorInchSecond(self, inches, seconds, wait = True):
-    speed = self.tachosperinch() * inches / seconds
+    speed = self.tachosperinch * inches / seconds
     if (speed > self.max_speed):
       print("Error: exceeds max speed")
       return
@@ -50,7 +71,7 @@ class MyMotor(Motor):
       return
     elif not speed:
       speed = self.defaultSpeed
-    seconds = abs(self.tachosperinch() * inches / speed)
+    seconds = abs(self.tachosperinch * inches / speed)
     if speed*inches < 0:
       speed = -1 * abs(speed)
     else:
@@ -69,44 +90,47 @@ class MyMotor(Motor):
     self.stoptime = datetime.datetime.now() + datetime.timedelta(seconds = seconds)
     self.run_timed(time_sp=seconds*1000, speed_sp=speed)
 
-
-
-class TankCar():
-  def __init__(self, left, right, axlelength = None):
+class TankCar(MoveTank):
+  def __init__(self, left, right, axlelength = None, defaultspeed = 100):
     self.left = left
     self.right = right
     self.axlelength = axlelength
     self.stoptime = None
+    self.defaultSpeed = defaultspeed
+    MoveTank.__init__(self, left_motor_port = self.left.port, right_motor_port = self.right.port)
     
-  def goStraight(self, speed = None, seconds = None, inches = None, wait = True):
+  def go(self, speed = None, seconds = None, inches = None, wait = True, leftparity = 1, rightparity = 1):
+    
     if speed and inches and seconds:
       print("Error: too many constraints")
       return
     elif speed and (speed > self.left.max_speed or speed > self.right.max_speed):
       print("Error: exceeds max speed")
-      return    
+      return
     elif speed and seconds:
-      self.left.runMotorSecondSpeed(seconds = seconds, speed = speed, wait = wait)
-      self.right.runMotorSecondSpeed(seconds = seconds, speed = speed, wait = wait)
+      self.on_for_seconds(left_speed = SpeedNativeUnits(leftparity * speed), right_speed = SpeedNativeUnits(rightparity * speed), seconds = seconds, brake=True, block=wait)
     elif inches and not (self.left.tireradius and self.right.tireradius):
       print("Error: set tire radius if using inches")
       return
     elif inches and seconds:
-      self.left.runMotorInchSecond(seconds = seconds, inches = inches, wait = wait)
-      self.right.runMotorInchSecond(seconds = seconds, inches = inches, wait = wait)
+      self.on_for_degrees(left_speed = SpeedDPS(leftparity * inches * self.left.degreesperinch / seconds), right_speed = SpeedDPS(rightparity * inches * self.right.degreesperinch / seconds), degrees = inches*max(self.left.degreesperinch, self.right.degreesperinch), brake=True, block=True)
     elif inches and speed:
-      self.left.runMotorSpeedInch(inches = inches, speed = speed, wait = wait)
-      self.right.runMotorSpeedInch(inches = inches, speed = speed, wait = wait)
+      self.on_for_degrees(left_speed = SpeedNativeUnits(leftparity * speed), right_speed = SpeedNativeUnits(rightparity * speed), degrees = inches*max(self.left.degreesperinch, self.right.degreesperinch), brake=True, block=True)
     elif inches:
-      self.left.runMotorSpeedInch(inches = inches, wait = wait)
-      self.right.runMotorSpeedInch(inches = inches, wait = wait)
+      if self.defaultSpeed:
+        self.on_for_degrees(left_speed = SpeedNativeUnits(leftparity * self.defaultSpeed), right_speed = SpeedNativeUnits(rightparity * self.defaultSpeed), degrees = inches*max(self.left.degressperinch, self.right.degreesperinch), brake=True, block=True)
+      elif self.left.defaultSpeed and self.right.defaultSpeed:
+        self.on_for_degrees(left_speed = SpeedNativeUnits(leftparity * self.left.defaultSpeed), right_speed = SpeedNativeUnits(rightparity * self.right.defaultSpeed), degrees = inches*max(self.left.degressperinch, self.right.degreesperinch), brake=True, block=True)
     elif seconds:
       self.left.runMotorSecondSpeed(seconds = seconds, wait = wait)
       self.right.runMotorSecondSpeed(seconds = seconds, wait = wait)
-    self.stoptime = self.left.stoptime
+    
+    if not seconds:
+      seconds = inches/speed * self.left.tachosperinch
+    self.stoptime = datetime.datetime.now() + datetime.timedelta(seconds = seconds)
     return(self.stoptime)
   
-  def tightTurn(self, direction, degrees = None, seconds = None, speed = None, wait = True):
+  def tightTurn(self, direction, degrees = None, seconds = None, speed = None, wait = True, gyro = None):
     if direction.lower() not in ["left", "right"]:
       print("Error: directions must be 'left' or 'right'")
       return
@@ -116,35 +140,19 @@ class TankCar():
     else:
       leftparity = 1
       rightparity = -1
-
-    if degrees and not (self.left.tireradius and self.right.tireradius and self.axlelength):
-      print("Error: must have tire radius and axle length set to calculate degrees")
-      return
-    else:
-      inches = self.axlelength * math.pi * degrees/360
-
-    if degrees and seconds and speed:
-      print("Error: too many constraints")
-    elif speed and (speed > self.left.max_speed) or (speed > self.right.max_speed):
-      print("Error: exceeds max speed")
-    elif speed and seconds:
-      self.left.runMotorSecondSpeed(seconds = seconds, speed = leftparity * speed, wait = wait)
-      self.right.runMotorSecondSpeed(seconds = seconds, speed = rightparity * speed, wait = wait)
-    elif degrees and seconds:
-      self.left.runMotorInchSecond(seconds = seconds, inches = inches, wait = wait)
-      self.right.runMotorInchSecond(seconds = seconds, inches = inches, wait = wait)
-    elif degrees and speed:
-      self.left.runMotorSpeedInch(inches = inches, speed = leftparity * speed, wait = wait)
-      self.right.runMotorSpeedInch(inches = inches, speed = rightparity * speed, wait = wait)
-    elif degrees:
-      self.left.runMotorSpeedInch(inches = leftparity * inches, wait = wait)
-      self.right.runMotorSpeedInch(inches = rightparity * inches, wait = wait)
-    elif seconds and (self.left.defaultSpeed and self.right.defaultSpeed):
-      self.left.runMotorSecondSpeed(seconds = seconds, speed = leftparity * self.left.defaultSpeed, wait = wait)
-      self.right.runMotorSecondSpeed(seconds = seconds, speed = rightparity * self.right.defaultSpeed, wait = wait)
     
-    self.stoptime = self.left.stoptime
-    return(self.stoptime)
+    gyro = None
+
+    if not gyro:
+      if degrees and not (self.left.tireradius and self.right.tireradius and self.axlelength):
+        print("Error: must have tire radius and axle length set to calculate degrees")
+        return
+      else:
+        inches = self.axlelength * math.pi * degrees/360
+      self.go(speed = speed, seconds = seconds, inches = inches, wait = wait, leftparity = leftparity, rightparity = rightparity)
+    
+    return self.stoptime
+
   
   def Stop(self):
     self.left.stop()

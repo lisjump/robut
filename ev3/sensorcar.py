@@ -42,9 +42,3 @@ class SensorCar(ev3.TankCar):
     except:
       self.ir = None
 
-  def tightTurn(self, direction, degrees = None, seconds = None, speed = None, wait = True):
-    if not self.gyro or not degrees:
-      super().tightTurn(direction = direction, degrees = degrees, seconds = seconds, speed = speed, wait = wait)
-    else:
-      super().tightTurn(direction = direction, degrees = degrees, seconds = seconds, speed = speed, wait = wait)
-    return self.stoptime
