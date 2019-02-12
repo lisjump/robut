@@ -9,24 +9,27 @@ car = SensorCar()
 
 
 movequeue = []
-queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"speed": 500, "seconds": 4, "wait": False})
-movequeue.append(queueitem)
-queueitem = ev3.QueueItem(startaction = car.sound.beep, startkwargs = {"args": "-f 300.7 -r 2 -d 100 -l 400"}, runtime = 1)
-movequeue.append(queueitem)
-queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"speed": -500, "seconds": 3, "wait": False})
-movequeue.append(queueitem)
-queueitem = ev3.QueueItem(startaction = car.tightTurn, startkwargs = {"direction": "left", "degrees": 180, "speed": 300, "wait": False, "gyro": car.gyro})
-movequeue.append(queueitem)
-queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"speed": 500, "inches": 10, "wait": False})
-movequeue.append(queueitem)
-queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"speed": 500, "inches": -10, "wait": False})
-movequeue.append(queueitem)
-queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"inches": 5, "seconds": 1, "wait": False})
-movequeue.append(queueitem)
-queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"inches": -5, "seconds": 1, "wait": False})
-movequeue.append(queueitem)
+# queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"speed": 500, "seconds": 4, "wait": False})
+# movequeue.append(queueitem)
+# queueitem = ev3.QueueItem(startaction = car.sound.beep, startkwargs = {"args": "-f 300.7 -r 2 -d 100 -l 400"}, runtime = 1)
+# movequeue.append(queueitem)
+# queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"speed": -500, "seconds": 3, "wait": False})
+# movequeue.append(queueitem)
+# queueitem = ev3.QueueItem(startaction = car.tightTurn, startkwargs = {"direction": "left", "degrees": 180, "speed": 300, "wait": False, "gyro": car.gyro})
+# movequeue.append(queueitem)
+# queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"speed": 500, "inches": 10, "wait": False})
+# movequeue.append(queueitem)
+# queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"speed": 500, "inches": -10, "wait": False})
+# movequeue.append(queueitem)
+# queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"inches": 5, "seconds": 1, "wait": False})
+# movequeue.append(queueitem)
+# queueitem = ev3.QueueItem(startaction = car.go, startkwargs = {"inches": -5, "seconds": 1, "wait": False})
+# movequeue.append(queueitem)
 
-
+queueitem = ev3.QueueItem(startaction = car.tightTurn, startkwargs = {"direction": "left", "degrees": 180, "speed": 10, "wait": False, "gyro": car.gyro}, runtime = 3)
+movequeue.append(queueitem)
+queueitem = ev3.QueueItem(startaction = car.Stop, runtime = 3)
+movequeue.append(queueitem)
 
 
 activeitem = False
@@ -45,8 +48,11 @@ while True:
         activeitem.stoptime = activeitem.startaction(**activeitem.startkwargs)
       else:
         activeitem.stoptime = activeitem.startaction()
+      
       if activeitem.runtime:
-          activeitem.stoptime = datetime.datetime.now() + datetime.timedelta(seconds = activeitem.runtime)
+        activeitem.stoptime = datetime.datetime.now() + datetime.timedelta(seconds = activeitem.runtime)
+      elif not active.stoptime:
+        active.stoptime = datetime.datetime.now()
 
   if car.touch.is_pressed:
     car.sound.beep()

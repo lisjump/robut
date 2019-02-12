@@ -24,7 +24,7 @@ class MyMotor(Motor):
     Motor.__init__(self, 'out' + port.upper())
     if reversed:
       self.polarity = "inversed"
-    self.tireradius = tireradius
+    self.tireradius = tireradius  # NOTE: if this is changed after init then you need to use settireradius()
     self.defaultSpeed = defaultSpeed
     self.stoptime = None
     self.stop_action = self.STOP_ACTION_BRAKE
@@ -33,6 +33,11 @@ class MyMotor(Motor):
       self.setdegreesperinch()
       self.settachosperinch()
 
+  def settireradius(self, tireradius):
+    self.tireradius = tireradius
+    self.setdegreesperinch()
+    self.settachosperinch()
+    
   def settachosperinch(self):
     if self.tireradius:
       self.tachosperinch = self.count_per_rot/(2 * math.pi * self.tireradius)
@@ -58,12 +63,7 @@ class MyMotor(Motor):
       print("Error: need tire radius")
 
   def runMotorInchSecond(self, inches, seconds, wait = True):
-    speed = self.tachosperinch * inches / seconds
-    if (speed > self.max_speed):
-      print("Error: exceeds max speed")
-      return
-    else:
-      self.runMotorSecondSpeed(speed = speed, seconds = seconds, wait = wait)
+    self.runMotorSecondSpeed(speed = self.speedgiveninchesseconds(inches, seconds), seconds = seconds, wait = wait)
 
   def runMotorSpeedInch(self, inches, speed = None, wait = True):
     if not speed and not self.defaultSpeed:
@@ -72,7 +72,7 @@ class MyMotor(Motor):
     elif not speed:
       speed = self.defaultSpeed
     seconds = abs(self.tachosperinch * inches / speed)
-    if speed*inches < 0:
+    if speed * inches < 0:
       speed = -1 * abs(speed)
     else:
       speed = abs(speed)
@@ -121,14 +121,32 @@ class TankCar(MoveTank):
         self.on_for_degrees(left_speed = SpeedNativeUnits(leftparity * self.defaultSpeed), right_speed = SpeedNativeUnits(rightparity * self.defaultSpeed), degrees = inches*max(self.left.degressperinch, self.right.degreesperinch), brake=True, block=True)
       elif self.left.defaultSpeed and self.right.defaultSpeed:
         self.on_for_degrees(left_speed = SpeedNativeUnits(leftparity * self.left.defaultSpeed), right_speed = SpeedNativeUnits(rightparity * self.right.defaultSpeed), degrees = inches*max(self.left.degressperinch, self.right.degreesperinch), brake=True, block=True)
+      else:
+        print("ERROR: No default speed set")
     elif seconds:
-      self.left.runMotorSecondSpeed(seconds = seconds, wait = wait)
-      self.right.runMotorSecondSpeed(seconds = seconds, wait = wait)
+      if self.defaultSpeed:
+        self.on_for_seconds(left_speed = SpeedNativeUnits(leftparity * self.defaultSpeed), right_speed = SpeedNativeUnits(rightparity * self.defaultSpeed), seconds = seconds, brake=True, block=wait)
+      elif self.left.defaultSpeed and self.right.defaultSpeed:
+        self.on_for_seconds(left_speed = SpeedNativeUnits(leftparity * self.left.defaultSpeed), right_speed = SpeedNativeUnits(rightparity * self.right.defaultSpeed), seconds = seconds, brake=True, block=wait)
+      else:
+        print("ERROR: No default speed set")
+    else:
+      if speed:
+        self.on(left_speed = leftparity * speed, right_speed = rightparity * speed)
+      elif self.defaultSpeed:
+        self.on(left_speed = leftparity * self.defaultSpeed, right_speed = rightparity * self.defaultSpeed)
+      elif self.left.defaultSpeed and self.right.defaultSpeed:
+        self.on(left_speed = leftparity * self.left.defaultSpeed, right_speed = rightparity * self.right.defaultSpeed)
+      else:
+        print("ERROR: No default speed set")
     
-    if not seconds:
+    if not seconds and inches:
       seconds = inches/speed * self.left.tachosperinch
-    self.stoptime = datetime.datetime.now() + datetime.timedelta(seconds = seconds)
-    return(self.stoptime)
+    if seconds:
+      self.stoptime = datetime.datetime.now() + datetime.timedelta(seconds = seconds)
+      return(self.stoptime)
+    else: 
+      return
   
   def tightTurn(self, direction, degrees = None, seconds = None, speed = None, wait = True, gyro = None):
     if direction.lower() not in ["left", "right"]:
@@ -141,22 +159,25 @@ class TankCar(MoveTank):
       leftparity = 1
       rightparity = -1
     
-    gyro = None
-
-    if not gyro:
+    if not gyro or not degrees:
       if degrees and not (self.left.tireradius and self.right.tireradius and self.axlelength):
         print("Error: must have tire radius and axle length set to calculate degrees")
         return
       else:
         inches = self.axlelength * math.pi * degrees/360
       self.go(speed = speed, seconds = seconds, inches = inches, wait = wait, leftparity = leftparity, rightparity = rightparity)
-    
+    else:
+      if seconds:
+        print("ERROR: Cannot use seconds with gyro sensor")
+        return
+      self.go(speed = speed, leftparity = leftparity, rightparity = rightparity)
+      gyro.wait_until_angle_changed_by(delta = degrees)
+      self.stop()
+
     return self.stoptime
 
-  
-  def Stop(self):
-    self.left.stop()
-    self.right.stop()
+def Stop(self):
+    self.stop()
     self.stoptime = datetime.datetime.now()
     return(self.stoptime)
 
